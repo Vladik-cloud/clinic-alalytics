@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 .env
 .venv/
+backend/.venv/
 data/dump.sql.gz
 data/dump.sql
+data/dump.dump
+data/*.dump
 pgdata/

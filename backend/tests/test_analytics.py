@@ -66,6 +66,7 @@ def test_referral_query_runs_with_default_schema(live_db):
 
 def test_schema_map_dataclass():
     schema = SchemaMap(
+        mode="demo",
         doctors="doctors",
         doctor_id="id",
         doctor_name="full_name",

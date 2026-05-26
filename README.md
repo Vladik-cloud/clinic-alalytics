@@ -22,30 +22,17 @@ API: **http://localhost:8000/api/report**
 | `api`  | 8000 | FastAPI, только SELECT (read-only роль) |
 | `db`   | 5433 (host) | PostgreSQL 16 — 5433, т.к. 5432 часто занят локальным Postgres |
 
-## Дамп из ТЗ
 
-Ссылка из задания — presigned URL с ограниченным сроком. Когда получите свежую ссылку:
+### Дамп ClinicIQ
 
 ```bash
-DUMP_URL="https://storage.yandexcloud.net/..." make download-dump
+cp ~/Downloads/demo_server_20260507.dump data/dump.dump
 make reset-db
 ```
 
-Либо положите `data/dump.sql.gz` вручную и пересоздайте volume: `make reset-db`.
+Формат `.dump` (pg_restore). Также: `data/dump.sql.gz`, `data/*.dump`. Без дампа — демо-seed.
 
-Если дамп недоступен, поднимается **демо-схема** (`doctors`, `patients`, `visits`, `services`) с тестовыми данными.
-
-### Маппинг таблиц реального дампа
-
-После импорта сервис пытается автоматически найти таблицы (`doctors`/`employees`, `visits`/`appointments`, …).  
-При необходимости задайте переменные окружения для `api` в `docker-compose.yml`:
-
-```yaml
-SCHEMA_DOCTORS_TABLE: employees
-SCHEMA_VISITS_TABLE: appointments
-SCHEMA_REVENUE_TABLE: invoice_items
-# и т.д. — см. backend/app/schema_map.py
-```
+Даты приёмов в дампе: примерно **2017-05-03** — **2026-04-30** (фильтр «completed»).
 
 ## Метрики
 

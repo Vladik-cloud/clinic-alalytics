@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Place a fresh dump URL from the task description into DUMP_URL before running.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -1,19 +1,8 @@
 from datetime import date
 
+from app import cliniciq_analytics
 from app.db import fetch_all
 from app.schema_map import SchemaMap, detect_schema
-
-
-def _period_params(start: date | None, end: date | None) -> tuple[str, dict]:
-    clauses: list[str] = []
-    params: dict = {}
-    if start:
-        clauses.append(">= :start_date")
-        params["start_date"] = start
-    if end:
-        clauses.append("< (:end_date::date + interval '1 day')")
-        params["end_date"] = end
-    return " AND ".join(clauses), params
 
 
 def _status_sql(schema: SchemaMap, alias: str = "v") -> str:
@@ -28,12 +17,13 @@ def revenue_by_doctor(
     end: date | None = None,
 ) -> list[dict]:
     s = schema or detect_schema()
-    period, params = _period_params(start, end)
+    if s.mode == "cliniciq":
+        return cliniciq_analytics.revenue_by_doctor(start, end)
     date_parts = []
     if start:
         date_parts.append(f"r.{s.revenue_at} >= :start_date")
     if end:
-        date_parts.append(f"r.{s.revenue_at} < (:end_date::date + interval '1 day')")
+        date_parts.append(f"r.{s.revenue_at} < CAST(:end_date AS date) + INTERVAL '1 day'")
     date_sql = (" AND " + " AND ".join(date_parts)) if date_parts else ""
 
     sql = f"""
@@ -49,7 +39,6 @@ def revenue_by_doctor(
         GROUP BY d.{s.doctor_id}, d.{s.doctor_name}
         ORDER BY revenue DESC, doctor_name
     """
-    _ = period
     return fetch_all(sql, params)
 
 
@@ -58,18 +47,16 @@ def referral_rate_by_doctor(
     start: date | None = None,
     end: date | None = None,
 ) -> list[dict]:
-    """
-    Перенаправляемость: пациент считается «перенаправленным», если его первый приём
-    был у врача X, а позже он посетил другого врача.
-    """
     s = schema or detect_schema()
+    if s.mode == "cliniciq":
+        return cliniciq_analytics.referral_rate_by_doctor(start, end)
     params: dict = {}
     fv_filters: list[str] = []
     if start:
         fv_filters.append("fv.first_visit_at >= :start_date")
         params["start_date"] = start
     if end:
-        fv_filters.append("fv.first_visit_at < (:end_date::date + interval '1 day')")
+        fv_filters.append("fv.first_visit_at < CAST(:end_date AS date) + INTERVAL '1 day'")
         params["end_date"] = end
     fv_where = ("WHERE " + " AND ".join(fv_filters)) if fv_filters else ""
 

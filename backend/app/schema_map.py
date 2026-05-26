@@ -1,5 +1,3 @@
-"""Maps real ClinicIQ dump tables to analytics queries via env overrides."""
-
 from dataclasses import dataclass
 import os
 
@@ -10,6 +8,7 @@ from app.db import engine
 
 @dataclass(frozen=True)
 class SchemaMap:
+    mode: str
     doctors: str
     doctor_id: str
     doctor_name: str
@@ -32,6 +31,7 @@ class SchemaMap:
 
 
 DEFAULT = SchemaMap(
+    mode="demo",
     doctors="doctors",
     doctor_id="id",
     doctor_name="full_name",
@@ -72,9 +72,12 @@ def _pick(*candidates: str) -> str | None:
 
 
 def detect_schema() -> SchemaMap:
-    """Auto-detect common ClinicIQ / MIS naming when env vars are not set."""
+    if _table_exists("appointments_appointment"):
+        return CLINICIQ
+
     if os.getenv("SCHEMA_DOCTORS_TABLE"):
         return SchemaMap(
+            mode="custom",
             doctors=os.environ["SCHEMA_DOCTORS_TABLE"],
             doctor_id=os.getenv("SCHEMA_DOCTOR_ID", "id"),
             doctor_name=os.getenv("SCHEMA_DOCTOR_NAME", "full_name"),
@@ -101,6 +104,7 @@ def detect_schema() -> SchemaMap:
         return DEFAULT
 
     return SchemaMap(
+        mode="generic",
         doctors=doctors,
         doctor_id="id",
         doctor_name=_column_or_default(doctors, ("full_name", "name", "fio", "title"), "full_name"),
@@ -137,3 +141,23 @@ def _column_or_default(table: str, candidates: tuple[str, ...], default: str | N
         if col in cols:
             return col
     return default
+
+
+CLINICIQ = SchemaMap(
+    mode="cliniciq",
+    doctors="auth_user",
+    doctor_id="id",
+    doctor_name="last_name",
+    patients="patients_patient",
+    patient_id="id",
+    visits="appointments_appointment",
+    visit_id="id",
+    visit_patient="patient_id",
+    visit_doctor="schedule_id",
+    visit_at="start_time",
+    visit_status="status",
+    revenue_table="appointments_treatmentplanstageprocedure",
+    revenue_doctor="doctor_id",
+    revenue_amount="frozen_price",
+    revenue_at="created_at",
+)
