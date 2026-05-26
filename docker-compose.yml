@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cliniciq
+      POSTGRES_USER: cliniciq
+      POSTGRES_PASSWORD: cliniciq
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./data:/data:ro
+    ports:
+      - "5433:5432"  # 5433 на хосте — если локальный Postgres уже слушает 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliniciq -d cliniciq"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://cliniciq_readonly:cliniciq_readonly@db:5432/cliniciq
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

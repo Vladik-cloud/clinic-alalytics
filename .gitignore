@@ -1,0 +1,10 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.venv/
+data/dump.sql.gz
+data/dump.sql
+pgdata/
