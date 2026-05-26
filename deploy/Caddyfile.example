@@ -1,0 +1,11 @@
+# /etc/caddy/Caddyfile on VPS — replace DOMAIN and APP_PORT.
+# Use http:// prefix: sslip.io + auto-HTTPS often causes ERR_SSL_PROTOCOL_ERROR.
+
+http://DOMAIN {
+    reverse_proxy 127.0.0.1:APP_PORT
+}
+
+# Example:
+# http://62-182-102-237.sslip.io {
+#     reverse_proxy 127.0.0.1:3001
+# }

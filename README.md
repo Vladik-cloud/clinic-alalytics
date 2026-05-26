@@ -42,11 +42,19 @@ make reset-db
 
 ## Тесты
 
+Unit-тесты (без БД, в Docker):
+
 ```bash
 make test
 ```
 
-Локально (нужен запущенный Postgres):
+Integration-тесты (нужен `make up`):
+
+```bash
+make test-integration
+```
+
+Локально (создаёт `backend/.venv` при первом запуске):
 
 ```bash
 make test-local
@@ -54,10 +62,74 @@ make test-local
 
 ## Деплой на VPS
 
-1. Установите Docker на сервер.
-2. Склонируйте репозиторий, положите дамп в `data/`.
-3. `docker compose up --build -d`
-4. Настройте reverse proxy (Caddy/Nginx) на порт `3000`.
+**Новичок?** Пошаговая инструкция с нуля: **[DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md)** (где взять VPS, что в каком порядке).
+
+**Что отправить проверяющему** — [SUBMISSION.md](./SUBMISSION.md).
+
+### Вариант A: с Mac одной командой (после настройки VPS)
+
+На сервере один раз: Docker + git + clone (см. ниже). Потом с Mac:
+
+```bash
+export VPS_HOST=ВАШ_IP VPS_USER=ubuntu DOMAIN=ваш-домен.ru
+make publish-vps
+```
+
+Скрипт зальёт `data/dump.dump` и перезапустит prod-стек.
+
+### Вариант B: вручную на сервере
+
+**1. Сервер (Ubuntu 22.04+)**
+
+```bash
+sudo apt update && sudo apt install -y git docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+# exit и зайти по SSH снова
+```
+
+**2. Код, `.env`, дамп**
+
+```bash
+git clone https://github.com/Vladik-cloud/clinic-alalytics.git
+cd clinic-alalytics
+cp .env.example .env
+nano .env   # POSTGRES_PASSWORD, CORS_ORIGINS=https://ваш-домен.ru
+```
+
+Дамп с Mac:
+
+```bash
+scp data/dump.dump ubuntu@ВАШ_IP:~/clinic-alalytics/data/dump.dump
+```
+
+**3. Запуск**
+
+```bash
+chmod +x scripts/deploy-on-server.sh
+./scripts/deploy-on-server.sh
+# логи импорта: docker-compose -f docker-compose.vps.yml logs -f db
+# Caddy (HTTP): bash scripts/fix-vps.sh
+```
+
+**4. Caddy (HTTP, см. deploy/Caddyfile.example)**
+
+```bash
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install -y caddy
+sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile
+sudo nano /etc/caddy/Caddyfile   # замените DOMAIN
+sudo systemctl reload caddy
+```
+
+**5. Firewall**
+
+```bash
+sudo ufw allow 22 && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw enable
+```
+
+Проверка: `curl -s http://ваш-домен.sslip.io/api/health`
 
 ## Документация
 

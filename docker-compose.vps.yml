@@ -1,0 +1,44 @@
+# Standalone compose for VPS (avoids port merge with docker-compose.yml).
+# Usage: docker-compose -f docker-compose.vps.yml up --build -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cliniciq
+      POSTGRES_USER: cliniciq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./data:/data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cliniciq -d cliniciq"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://cliniciq_readonly:cliniciq_readonly@db:5432/cliniciq
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:3001:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

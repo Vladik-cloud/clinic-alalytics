@@ -9,7 +9,10 @@ from app.schema_map import SchemaMap
 
 DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://cliniciq_readonly:cliniciq_readonly@localhost:5432/cliniciq",
+    os.getenv(
+        "DATABASE_URL",
+        "postgresql://cliniciq_readonly:cliniciq_readonly@localhost:5433/cliniciq",
+    ),
 )
 
 
